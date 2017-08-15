@@ -17,7 +17,6 @@
 package com.example.nativecodec;
 
 import android.app.Activity;
-import android.content.res.AssetManager;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.util.Log;
@@ -33,12 +32,10 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.RadioButton;
 import android.widget.Spinner;
 
-import java.io.IOException;
-
 import cn.ismartv.player.IsmartvPlayer;
 
-public class NativeCodec extends Activity {
-    static final String TAG = "NativeCodec";
+public class NativeCodecActivity extends Activity {
+    static final String TAG = "NativeCodecActivity";
 
     String mSourceString = null;
 
@@ -54,11 +51,17 @@ public class NativeCodec extends Activity {
     boolean mCreated = false;
     boolean mIsPlaying = false;
 
-    /** Called when the activity is first created. */
+    IsmartvPlayer mIsmartvPlayer;
+
+    /**
+     * Called when the activity is first created.
+     */
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
         setContentView(R.layout.main);
+
+        mIsmartvPlayer = new IsmartvPlayer();
 
         mGLView1 = (MyGLSurfaceView) findViewById(R.id.glsurfaceview1);
 
@@ -78,7 +81,7 @@ public class NativeCodec extends Activity {
             public void surfaceCreated(SurfaceHolder holder) {
                 Log.v(TAG, "surfaceCreated");
                 if (mRadio1.isChecked()) {
-                    setSurface(holder.getSurface());
+                    mIsmartvPlayer._setSurface(holder.getSurface());
                 }
             }
 
@@ -116,33 +119,33 @@ public class NativeCodec extends Activity {
 
         OnCheckedChangeListener checklistener = new CompoundButton.OnCheckedChangeListener() {
 
-          @Override
-          public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-              Log.i("@@@@", "oncheckedchanged");
-              if (buttonView == mRadio1 && isChecked) {
-                  mRadio2.setChecked(false);
-              }
-              if (buttonView == mRadio2 && isChecked) {
-                  mRadio1.setChecked(false);
-              }
-              if (isChecked) {
-                  if (mRadio1.isChecked()) {
-                      if (mSurfaceHolder1VideoSink == null) {
-                          mSurfaceHolder1VideoSink = new SurfaceHolderVideoSink(mSurfaceHolder1);
-                      }
-                      mSelectedVideoSink = mSurfaceHolder1VideoSink;
-                      mGLView1.onPause();
-                      Log.i("@@@@", "glview pause");
-                  } else {
-                      mGLView1.onResume();
-                      if (mGLView1VideoSink == null) {
-                          mGLView1VideoSink = new GLViewVideoSink(mGLView1);
-                      }
-                      mSelectedVideoSink = mGLView1VideoSink;
-                  }
-                  switchSurface();
-              }
-          }
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                Log.i("@@@@", "oncheckedchanged");
+                if (buttonView == mRadio1 && isChecked) {
+                    mRadio2.setChecked(false);
+                }
+                if (buttonView == mRadio2 && isChecked) {
+                    mRadio1.setChecked(false);
+                }
+                if (isChecked) {
+                    if (mRadio1.isChecked()) {
+                        if (mSurfaceHolder1VideoSink == null) {
+                            mSurfaceHolder1VideoSink = new SurfaceHolderVideoSink(mSurfaceHolder1);
+                        }
+                        mSelectedVideoSink = mSurfaceHolder1VideoSink;
+                        mGLView1.onPause();
+                        Log.i("@@@@", "glview pause");
+                    } else {
+                        mGLView1.onResume();
+                        if (mGLView1VideoSink == null) {
+                            mGLView1VideoSink = new GLViewVideoSink(mGLView1);
+                        }
+                        mSelectedVideoSink = mGLView1VideoSink;
+                    }
+                    switchSurface();
+                }
+            }
         };
         mRadio1.setOnCheckedChangeListener(checklistener);
         mRadio2.setOnCheckedChangeListener(checklistener);
@@ -160,7 +163,7 @@ public class NativeCodec extends Activity {
             public void onClick(View v) {
                 mRadio2.toggle();
             }
-      });
+        });
 
         // initialize button click handlers
 
@@ -178,15 +181,13 @@ public class NativeCodec extends Activity {
                         mNativeCodecPlayerVideoSink = mSelectedVideoSink;
                     }
                     if (mSourceString != null) {
-                        IsmartvPlayer ismartvPlayer = new IsmartvPlayer();
-                        ismartvPlayer.prepare("/sdcard/chinesemovie_0.mp4");
-                        mCreated = createStreamingMediaPlayer(getResources().getAssets(),
-                                mSourceString);
+                        mCreated = mIsmartvPlayer._prepare("/sdcard/chinesemovie_0.mp4");
+                        mIsmartvPlayer._start();
                     }
                 }
                 if (mCreated) {
                     mIsPlaying = !mIsPlaying;
-                    setPlayingStreamingMediaPlayer(mIsPlaying);
+                    mIsmartvPlayer._setPlayingStreamingMediaPlayer(mIsPlaying);
                 }
             }
 
@@ -199,7 +200,7 @@ public class NativeCodec extends Activity {
             @Override
             public void onClick(View view) {
                 if (mNativeCodecPlayerVideoSink != null) {
-                    rewindStreamingMediaPlayer();
+                    mIsmartvPlayer._rewind();
                 }
             }
 
@@ -209,25 +210,26 @@ public class NativeCodec extends Activity {
     void switchSurface() {
         if (mCreated && mNativeCodecPlayerVideoSink != mSelectedVideoSink) {
             // shutdown and recreate on other surface
-          Log.i("@@@", "shutting down player");
-            shutdown();
+            Log.i("@@@", "shutting down player");
+            mIsmartvPlayer._stop();
             mCreated = false;
             mSelectedVideoSink.useAsSinkForNative();
             mNativeCodecPlayerVideoSink = mSelectedVideoSink;
             if (mSourceString != null) {
                 Log.i("@@@", "recreating player");
-                mCreated = createStreamingMediaPlayer(getResources().getAssets(),mSourceString);
+                mCreated = mIsmartvPlayer._prepare(mSourceString);
                 mIsPlaying = false;
             }
         }
     }
 
-    /** Called when the activity is about to be paused. */
+    /**
+     * Called when the activity is about to be paused.
+     */
     @Override
-    protected void onPause()
-    {
+    protected void onPause() {
         mIsPlaying = false;
-        setPlayingStreamingMediaPlayer(false);
+        mIsmartvPlayer._setPlayingStreamingMediaPlayer(false);
         mGLView1.onPause();
         super.onPause();
     }
@@ -240,11 +242,12 @@ public class NativeCodec extends Activity {
         }
     }
 
-    /** Called when the activity is about to be destroyed. */
+    /**
+     * Called when the activity is about to be destroyed.
+     */
     @Override
-    protected void onDestroy()
-    {
-        shutdown();
+    protected void onDestroy() {
+        mIsmartvPlayer._stop();
         mCreated = false;
         super.onDestroy();
     }
@@ -256,16 +259,15 @@ public class NativeCodec extends Activity {
     private RadioButton mRadio2;
 
     /** Native methods, implemented in jni folder */
-    public static native void createEngine();
-    public static native boolean createStreamingMediaPlayer(AssetManager assetMgr, String filename);
-    public static native void setPlayingStreamingMediaPlayer(boolean isPlaying);
-    public static native void shutdown();
-    public static native void setSurface(Surface surface);
-    public static native void rewindStreamingMediaPlayer();
+//    public static native boolean createStreamingMediaPlayer(AssetManager assetMgr, String filename);
+//    public static native void setPlayingStreamingMediaPlayer(boolean isPlaying);
+//    public static native void shutdown();
+//    public static native void setSurface(Surface surface);
+//    public static native void rewindStreamingMediaPlayer();
 
     /** Load jni .so on initialization */
     static {
-         System.loadLibrary("native-codec-jni");
+        System.loadLibrary("native-codec-jni");
     }
 
     // VideoSink abstracts out the difference between Surface and SurfaceTexture
@@ -273,11 +275,12 @@ public class NativeCodec extends Activity {
     static abstract class VideoSink {
 
         abstract void setFixedSize(int width, int height);
+
         abstract void useAsSinkForNative();
 
     }
 
-    static class SurfaceHolderVideoSink extends VideoSink {
+    class SurfaceHolderVideoSink extends VideoSink {
 
         private final SurfaceHolder mSurfaceHolder;
 
@@ -294,12 +297,12 @@ public class NativeCodec extends Activity {
         void useAsSinkForNative() {
             Surface s = mSurfaceHolder.getSurface();
             Log.i("@@@", "setting surface " + s);
-            setSurface(s);
+            mIsmartvPlayer._setSurface(s);
         }
 
     }
 
-    static class GLViewVideoSink extends VideoSink {
+    class GLViewVideoSink extends VideoSink {
 
         private final MyGLSurfaceView mMyGLSurfaceView;
 
@@ -315,7 +318,7 @@ public class NativeCodec extends Activity {
         void useAsSinkForNative() {
             SurfaceTexture st = mMyGLSurfaceView.getSurfaceTexture();
             Surface s = new Surface(st);
-            setSurface(s);
+            mIsmartvPlayer._setSurface (s);
             s.release();
         }
 

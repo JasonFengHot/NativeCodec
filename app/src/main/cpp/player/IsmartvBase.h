@@ -5,6 +5,10 @@
 #ifndef NATIVE_CODEC_ISMARTVBASE_H
 #define NATIVE_CODEC_ISMARTVBASE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -25,6 +29,29 @@
 #define ALOGE(...)  __android_log_print(ANDROID_LOG_ERROR,      LOG_TAG, __VA_ARGS__)
 
 
+#ifndef NELEM
+#define NELEM(x) ((int) (sizeof(x) / sizeof((x)[0])))
+#endif
+
 bool ExceptionCheck__catchAll(JNIEnv *env);
 
+#define ISMARTV_FIND_JAVA_CLASS(env__, var__, classsign__) \
+    do { \
+        jclass clazz = env__->FindClass(classsign__); \
+        if (ExceptionCheck__catchAll(env) || !(clazz)) { \
+            ALOGE("FindClass failed: %s", classsign__); \
+            return -1; \
+        } \
+        var__ = env__->NewGlobalRef(clazz); \
+        if (ExceptionCheck__catchAll(env) || !(var__)) { \
+            ALOGE("FindClass::NewGlobalRef failed: %s", classsign__); \
+            env__->DeleteLocalRef( clazz); \
+            return -1; \
+        } \
+        env__->DeleteLocalRef(clazz); \
+    } while(0);
+
+#ifdef __cplusplus
+}
+#endif
 #endif //NATIVE_CODEC_ISMARTVBASE_H

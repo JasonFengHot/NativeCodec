@@ -1,5 +1,7 @@
 package cn.ismartv.player;
 
+import android.view.Surface;
+
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
@@ -13,28 +15,39 @@ public class IsmartvPlayer {
         listeners = new CopyOnWriteArraySet();
     }
 
-    public native void prepare(String source);
+    public native boolean _prepare(String source);
 
-    public native void setPlayWhenReady();
+    public native void _start();
 
-    public native void seekTo();
+    public native void _setSurface(Surface surface);
 
-    public native void stop();
+    public native void _setPlayingStreamingMediaPlayer(boolean bool);
 
-    public native void release();
+    public native void _stop();
 
-    public void addListener(EventListener listener) {
-        listeners.add(listener);
-    }
+    public native void _rewind();
 
-    public void removeListener(EventListener listener) {
-        listeners.remove(listener);
-    }
 
-    interface EventListener {
 
-        void onPlayerError(Exception error);
+//
+//    public native void seekTo();
+//
+//    public native void stop();
+//
+//    public native void release();
 
-    }
+//    public void addListener(EventListener listener) {
+//        listeners.add(listener);
+//    }
+//
+//    public void removeListener(EventListener listener) {
+//        listeners.remove(listener);
+//    }
+//
+//    interface EventListener {
+//
+//        void onPlayerError(Exception error);
+//
+//    }
 
 }
