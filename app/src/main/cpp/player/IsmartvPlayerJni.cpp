@@ -13,6 +13,7 @@
 #include "IsmartvPlayerJni.h"
 #include "IsmartvPlayerInternal.h"
 #include "../looper.h"
+#include "Mp4Extractor.h"
 
 #define  JNI_CLASS_ISMARTVPLAYER "cn/ismartv/player/IsmartvPlayer"
 
@@ -35,6 +36,7 @@ typedef struct {
     bool sawOutputEOS;
     bool isPlaying;
     bool renderonce;
+    int64_t positionMs;
 } workerdata;
 
 workerdata data = {-1, NULL, NULL, NULL, 0, false, false, false, false};
@@ -151,6 +153,7 @@ static jboolean IsmartvPlayer_prepare(JNIEnv *env, jobject thiz, jstring jsource
             AMediaExtractor_selectTrack(extractor, i);
             mediaCodec = AMediaCodec_createDecoderByType(mime);
             AMediaCodec_configure(mediaCodec, mediaFormat, d->window, NULL, 0);
+
             d->ex = extractor;
             d->codec = mediaCodec;
             d->renderstart = -1;
@@ -169,15 +172,10 @@ static jboolean IsmartvPlayer_prepare(JNIEnv *env, jobject thiz, jstring jsource
     return JNI_TRUE;
 }
 
-static void IsmartvPlayer_start(JNIEnv *env, jobject thiz) {
-    ALOGD("IsmartvPlayer_start");
-}
-
-static void
-IsmartvPlayer_setPlayingStreamingMediaPlayer(JNIEnv *env, jobject thiz, jboolean isPlaying) {
+static void IsmartvPlayer_setPlayWhenReady(JNIEnv *env, jobject thiz, jboolean playWhenReady) {
     ALOGD("IsmartvPlayer_setPlayingStreamingMediaPlayer");
     if (playerLooper) {
-        if (isPlaying) {
+        if (playWhenReady) {
             playerLooper->post(kMsgResume, &data);
         } else {
             playerLooper->post(kMsgPause, &data);
@@ -204,6 +202,24 @@ static void IsmartvPlayer_rewind(JNIEnv *env, jobject thiz) {
     ALOGD("IsmartvPlayer_rewind");
     if (playerLooper) {
         playerLooper->post(kMsgRewind, &data);
+    }
+}
+
+static jlong IsmartvPlayer_getDuration(JNIEnv *env, jobject instance) {
+    ALOGD("IsmartvPlayer_getDuration");
+    int64_t duration = Mp4Extractor_getDuration(data.source);
+    return (jlong)duration;
+}
+
+static long IsmartvPlayer_getCurrentPosition(JNIEnv *env, jobject instance) {
+    ALOGD("IsmartvPlayer_getCurrentPosition");
+}
+
+static void IsmartvPlayer_seekTo(JNIEnv *env, jobject instance, jlong positionMs) {
+    ALOGD("IsmartvPlayer_seekTo");
+    data.positionMs = (size_t)positionMs;
+    if (playerLooper){
+        playerLooper->post(kMsgSeek, &data);
     }
 }
 
@@ -293,7 +309,7 @@ void PlayerLooper::handle(int what, void *obj) {
             break;
         case kMsgSeek: {
             workerdata *d = (workerdata *) obj;
-            AMediaExtractor_seekTo(d->ex, 0, AMEDIAEXTRACTOR_SEEK_NEXT_SYNC);
+            AMediaExtractor_seekTo(d->ex, d->positionMs * 1000, AMEDIAEXTRACTOR_SEEK_NEXT_SYNC);
             AMediaCodec_flush(d->codec);
             d->renderstart = -1;
             d->sawInputEOS = false;
@@ -342,12 +358,6 @@ void PlayerLooper::handle(int what, void *obj) {
 
 static JNINativeMethod g_methods[] = {
         {
-                "_start",
-                "()V",
-                (void *) IsmartvPlayer_start
-        },
-
-        {
                 "_prepare",
                 "(Ljava/lang/String;)Z",
                 (void *) IsmartvPlayer_prepare
@@ -359,9 +369,9 @@ static JNINativeMethod g_methods[] = {
         },
 
         {
-                "_setPlayingStreamingMediaPlayer",
+                "_setPlayWhenReady",
                 "(Z)V",
-                (void *) IsmartvPlayer_setPlayingStreamingMediaPlayer
+                (void *) IsmartvPlayer_setPlayWhenReady
         },
 
         {
@@ -374,6 +384,25 @@ static JNINativeMethod g_methods[] = {
                 "_rewind",
                 "()V",
                 (void *) IsmartvPlayer_rewind
+        },
+
+        {
+                "_getDuration",
+                "()J",
+                (void *) IsmartvPlayer_getDuration
+        },
+
+        {
+                "_getCurrentPosition",
+                "()J",
+                (void *) IsmartvPlayer_getCurrentPosition
+
+        },
+
+        {
+                "_seekTo",
+                "(J)V",
+                (void *) IsmartvPlayer_seekTo
         }
 };
 

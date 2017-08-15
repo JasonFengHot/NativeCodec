@@ -17,15 +17,19 @@ public class IsmartvPlayer {
 
     public native boolean _prepare(String source);
 
-    public native void _start();
-
     public native void _setSurface(Surface surface);
 
-    public native void _setPlayingStreamingMediaPlayer(boolean bool);
+    public native long _getDuration();
 
-    public native void _stop();
+    public native long _getCurrentPosition();
+
+    public native void _seekTo(long positionMs);
+
+    public native void _setPlayWhenReady(boolean playWhenReady);
 
     public native void _rewind();
+
+    public native void _stop();
 
 
 

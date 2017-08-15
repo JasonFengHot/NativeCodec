@@ -7,7 +7,8 @@ add_library(native-codec-jni SHARED
             player/IsmartvBase.c
             player/IsmartvMediaPlayer.c
             player/IsmartvPlayer.c
-            player/IsmartvPlayerJni.cpp)
+            player/IsmartvPlayerJni.cpp
+            player/Mp4Extractor.c)
 
 # Include libraries needed for native-codec-jni lib
 target_link_libraries(native-codec-jni
